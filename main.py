@@ -1,138 +1,113 @@
 import pygame
-import sys
-import pyaudio
-import math
+from pygame import mixer
+import librosa
+import numpy as np
 
-# song = "winterfall_example.mp3"
+def clamp(min_n, max_n, n):
+    if n < min_n:
+        return min_n
+    if n > max_n:
+        return max_n
+    return n
+class AudioBar:
+    def __init__(self, x, y, freq, color, width=50, min_height=10, max_height=100, min_decibel=-80, max_decibel=0):
+        self.x = x
+        self.y = y
+        self.freq = freq
 
-# mixer.init()
-# mixer.music.load(song)
-# mixer.music.set_volume(0.1)
-# mixer.music.play()
+        self.color = color
 
-# while True:
-#     print("Press e to exit the program")
-#     command = input(" ")
+        self.width = width
+        self.min_height = min_height
+        self.max_height = max_height
 
-#     if command == 'e':
-#         mixer.music.stop()
-#         break
+        self.height = min_height
 
-  
-# initialize constructor
-pygame.init() 
-  
-# screen dimensions
-res = (1024, 768) 
+        self.min_decibel = min_decibel
+        self.max_decibel = max_decibel
+
+        self.decibel_height_ratio = (self.max_height - self.min_height)/(self.max_decibel - self.min_decibel)
+
+    def update(self, dt, decibel):
+        desired_height = decibel * self.decibel_height_ratio + self.max_height
+        speed = (desired_height - self.height)/0.1
+
+        self.height += speed * dt
+        self.height = clamp(self.min_height, self.max_height, self.height)
+
+    def render(self, screen):
+        pygame.draw.rect(screen, self.color, (self.x, self.y + self.max_height - self.height, self.width, self.height))
+
+
+song = "winterfall_example.mp3"
+
+# getting info from the file to create a matrix with amplitude values
+time_series, sample_rate = librosa.load(song)
+# getting a matrix which contains amplitude values according to frequency and time indexes
+stft = np.abs(librosa.stft(time_series, hop_length=512, n_fft=2048*4))
+
+spectrogram = librosa.amplitude_to_db(stft, ref=np.max)  # converting the matrix to decibel matrix
+
+frequencies = librosa.core.fft_frequencies(n_fft=2048*4)  # getting an array of frequencies
+
+# getting an array of time periodic
+times = librosa.core.frames_to_time(np.arange(spectrogram.shape[1]), sr=sample_rate, hop_length=512, n_fft=2048*4)
+
+time_index_ratio = len(times)/times[len(times) - 1]
+
+frequencies_index_ratio = len(frequencies)/frequencies[len(frequencies)-1]
+
+
+def get_decibel(target_time, freq):
+    return spectrogram[int(freq * frequencies_index_ratio)][int(target_time * time_index_ratio)]
+
 pygame.init()
 
-screen = pygame.display.set_mode((res[0], res[1]))
-clock = pygame.time.Clock()
+# infoObject = pygame.display.Info()
 
-# audio
-chunk = 1024
-f = pyaudio.paInt16
-channels = 1
-rate = 44100
+# screen_w = int(infoObject.current_w/2.5)
+# screen_h = int(infoObject.current_w/2.5)
 
-p = pyaudio.PyAudio()
-stream = p.open(format=f, channels = channels, rate = rate, input = True, frames_per_buffer=chunk)
+res = (1024,768)
 
-def get_mic_input_level():
-    data = stream.read(chunk)
-    rms = 0
-    for i in range(0, len(data), 2):
-        sample = int.from_bytes(data[i:i + 2], byteorder='little', signed=True)
-        rms += sample * sample
-    rms = math.sqrt(rms/(chunk/2))
-    return rms
+screen = pygame.display.set_mode([res[0], res[1]]) 
 
-def draw_sine_wave(amp):
-    screen.fill((0,0,0))
-    points = []
-    if amp > 10:
-        for x in range(res[0]):
-            y = res[1]/2 + int(amp * math.sin(x * 0.02))
-            points.append((x,y))
-    else:
-        points.append((0, res[1]/2))
-        points.append((res[0], res[1]/2))
-    
-    pygame.draw.lines(screen, (223, 82, 255), False, points, 2)
-    pygame.display.flip()
+bars = []
+frequencies = np.arange(100, 8000, 100)
+r = len(frequencies)
 
-run = True
-amp = 100
+width = res[0] / r
+x = (res[0] - width*r) / 2
+y = 0
 
-while run:
+
+for c in frequencies:
+    bars.append(AudioBar(x,y,c,(217, 73, 252), max_height=400, width=width))
+    x += width
+
+t = pygame.time.get_ticks()
+tick_last_frame = t
+
+mixer.music.load(song)
+mixer.music.play(0)
+
+running = True
+while running:
+    t = pygame.time.get_ticks()
+    change_in_time = (t - tick_last_frame) / 1000.0
+    tick_last_frame = t
+
+    # close the program if the x button is pressed
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
-            run = False
-    amp_adj = get_mic_input_level() / 50
-    amp = max(10, amp_adj)
+            running = False
 
-    draw_sine_wave(amp)
-    clock.tick(60)
+    screen.fill((0,0,0))
 
-# # opens up a window 
-# screen = pygame.display.set_mode(res) 
-  
-# # white color 
-# color = (255,255,255) 
-  
-# # light shade of the button 
-# color_light = (170,170,170) 
-  
-# # dark shade of the button 
-# color_dark = (100,100,100) 
-  
-# # stores the width of the 
-# # screen into a variable 
-# width = screen.get_width() 
-  
-# # stores the height of the 
-# # screen into a variable 
-# height = screen.get_height() 
-  
-# # defining a font 
-# smallfont = pygame.font.SysFont('Corbel',12) 
-  
-# # rendering a text written in 
-# # this font 
-# text = smallfont.render('quit' , True , color) 
-  
-# while True: 
-      
-#     for ev in pygame.event.get(): 
-          
-#         if ev.type == pygame.QUIT: 
-#             pygame.quit() 
-              
-#         #checks if a mouse is clicked 
-#         if ev.type == pygame.MOUSEBUTTONDOWN: 
-              
-#             #if the mouse is clicked on the 
-#             # button the game is terminated 
-#             if width/2 <= mouse[0] <= width/2+140 and height/2 <= mouse[1] <= height/2+40: 
-#                 pygame.quit() 
-                  
-#     # fills the screen with a color 
-#     screen.fill((0,0,0)) 
-      
-#     # stores the (x,y) coordinates into 
-#     # the variable as a tuple 
-#     mouse = pygame.mouse.get_pos() 
-      
-#     # if mouse is hovered on a button it 
-#     # changes to lighter shade  
-#     if width/2 <= mouse[0] <= width/2+140 and height/2 <= mouse[1] <= height/2+40: 
-#         pygame.draw.rect(screen,color_light,[width/2,height/2,140,40]) 
-          
-#     else: 
-#         pygame.draw.rect(screen,color_dark,[width/2,height/2,140,40]) 
-      
-#     # superimposing the text onto our button 
-#     screen.blit(text , (width/2+50,height/2)) 
-      
-#     # updates the frames of the game 
-#     pygame.display.update() 
+    for b in bars:
+        b.update(change_in_time, get_decibel(mixer.music.get_pos()/1000.0, b.freq))
+        b.render(screen)
+
+    pygame.display.flip()
+
+pygame.quit()
