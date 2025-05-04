@@ -35,6 +35,7 @@ class AudioBar:
         self.height += speed * dt
         self.height = clamp(self.min_height, self.max_height, self.height)
 
+    # --- GLOBAL ILLUMINATION STUFF GOES HERE ---
     def render(self, screen):
         pygame.draw.rect(screen, self.color, (self.x, self.y + self.max_height - self.height, self.width, self.height))
 
