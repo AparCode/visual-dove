@@ -135,13 +135,14 @@ class AudioBar:
     def render(self, screen):
         pygame.draw.rect(screen, self.color, (self.x, self.y + self.max_height - self.height, self.width, self.height))
 
-class ReverseAudioBar:
-    def __init__(self, x, y, freq, color, width=50, min_height=10, max_height=100, min_decibel=-80, max_decibel=0):
+class AudioBar:
+    def __init__(self, x, y, freq, c1, c2, width=50, min_height=10, max_height=100, min_decibel=-80, max_decibel=0):
         self.x = x
         self.y = y
         self.freq = freq
 
-        self.color = color
+        self.color = c1
+        self.flip_color = c2
 
         self.width = width
         self.min_height = min_height
@@ -168,10 +169,8 @@ class ReverseAudioBar:
         he = self.height
         y_flip = 364
         he_flip = y
-        print(he)
         pygame.draw.rect(screen, self.color, (self.x, y, self.width, he))
-        pygame.draw.rect(screen, (255,0,0), (self.x, y_flip, self.width, he_flip))
-        # pygame.draw.rect(screen, (0,0,255), (self.x, 364, self.width, 300))
+        pygame.draw.rect(screen, self.flip_color, (self.x, y_flip, self.width, he_flip))
 
 song = "creamsodaredemo2.wav"
 
@@ -216,8 +215,7 @@ y = 0
 
 
 for c in frequencies:
-    # bars.append(ReverseAudioBar(x,y,c,(217, 73, 252), max_height=400, width=width))
-    bars.append(ReverseAudioBar(x,y,c,(217, 73, 252), max_height=400, width=width))
+    bars.append(AudioBar(x,y,c,(217, 73, 252), (94, 30, 110), max_height=400, width=width))
     x += width
 
 t = pygame.time.get_ticks()
