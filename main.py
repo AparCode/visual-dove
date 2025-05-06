@@ -135,8 +135,45 @@ class AudioBar:
     def render(self, screen):
         pygame.draw.rect(screen, self.color, (self.x, self.y + self.max_height - self.height, self.width, self.height))
 
+class ReverseAudioBar:
+    def __init__(self, x, y, freq, color, width=50, min_height=10, max_height=100, min_decibel=-80, max_decibel=0):
+        self.x = x
+        self.y = y
+        self.freq = freq
 
-song = "winterfall_example.mp3"
+        self.color = color
+
+        self.width = width
+        self.min_height = min_height
+        self.max_height = max_height
+
+        self.height = min_height
+
+        self.min_decibel = min_decibel
+        self.max_decibel = max_decibel
+
+        self.decibel_height_ratio = (self.max_height - self.min_height)/(self.max_decibel - self.min_decibel)
+
+    def update(self, dt, decibel):
+        desired_height = decibel * self.decibel_height_ratio + self.max_height
+        speed = (desired_height - self.height)/0.1
+        # self.height = self.max_height
+
+        self.height += speed * dt
+        self.height = clamp(self.min_height, self.max_height, self.height)
+
+    # --- GLOBAL ILLUMINATION STUFF GOES HERE ---
+    def render(self, screen):
+        y = (self.y + self.max_height - self.height)
+        he = self.height
+        y_flip = 364
+        he_flip = y
+        print(he)
+        pygame.draw.rect(screen, self.color, (self.x, y, self.width, he))
+        pygame.draw.rect(screen, (255,0,0), (self.x, y_flip, self.width, he_flip))
+        # pygame.draw.rect(screen, (0,0,255), (self.x, 364, self.width, 300))
+
+song = "creamsodaredemo2.wav"
 
 # getting info from the file to create a matrix with amplitude values
 time_series, sample_rate = librosa.load(song)
@@ -179,7 +216,8 @@ y = 0
 
 
 for c in frequencies:
-    bars.append(AudioBar(x,y,c,(217, 73, 252), max_height=400, width=width))
+    # bars.append(ReverseAudioBar(x,y,c,(217, 73, 252), max_height=400, width=width))
+    bars.append(ReverseAudioBar(x,y,c,(217, 73, 252), max_height=400, width=width))
     x += width
 
 t = pygame.time.get_ticks()
