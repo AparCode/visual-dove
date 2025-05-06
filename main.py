@@ -1,3 +1,9 @@
+# VisualizerDove - Main File
+# FINAL PROJECT
+# @author: Aparnaa Senthilnathan
+# 3.12.7
+# ----------------------------------
+
 import pygame
 from pygame import mixer
 import librosa
@@ -103,6 +109,33 @@ def clamp(min_n, max_n, n):
             L = Color(r*255,g*255,b*255)
 
         return L, batch
+def read_color_grid(filename):
+    image_width = 128
+    image_height = 96
+
+
+    with open(filename, 'r') as f:
+        lines = f.readlines()
+        arr = []
+        for li in lines:
+            test = li.strip().split(" ")
+            if test != ['']:
+                te = list(map(int, test))
+                arr.append(te)
+            else:
+                arr.append("--")
+
+        color_grid = []
+        for r in range(96):
+            r_arr = []
+            for c in range(128):
+                if arr[(r*(c-1))+c] != '--':
+                    r_arr.append(arr[(r*(c-1))+c])
+            if len(r_arr) < 128:
+                r_arr.append(r_arr[len(r_arr)-1])
+            color_grid.append(r_arr)
+    
+    return color_grid
 
 class AudioBar:
     def __init__(self, x, y, freq, color, width=50, min_height=10, max_height=100, min_decibel=-80, max_decibel=0):
@@ -142,6 +175,7 @@ class AudioBar:
         self.freq = freq
 
         self.color = c1
+        # self.flip_color = color_grid
         self.flip_color = c2
 
         self.width = width
@@ -171,6 +205,7 @@ class AudioBar:
         he_flip = y
         pygame.draw.rect(screen, self.color, (self.x, y, self.width, he))
         pygame.draw.rect(screen, self.flip_color, (self.x, y_flip, self.width, he_flip))
+        # pygame.draw.rect(screen, self.flip_color[int(self.y)//8][int(self.x)//8], (self.x, y_flip, self.width, he_flip))
 
 song = "creamsodaredemo2.wav"
 
@@ -196,12 +231,12 @@ def get_decibel(target_time, freq):
 
 pygame.init()
 
-# infoObject = pygame.display.Info()
 
-# screen_w = int(infoObject.current_w/2.5)
-# screen_h = int(infoObject.current_w/2.5)
-
+# final dimensions
 res = (1024,768)
+
+# testing dimensions
+# res = (128,96)
 
 screen = pygame.display.set_mode([res[0], res[1]]) 
 
@@ -213,9 +248,11 @@ width = res[0] / r
 x = (res[0] - width*r) / 2
 y = 0
 
+color_grid = read_color_grid("rgbref.txt")
 
 for c in frequencies:
     bars.append(AudioBar(x,y,c,(217, 73, 252), (94, 30, 110), max_height=400, width=width))
+    # bars.append(AudioBar(x,y,c,(217, 73, 252), color_grid, max_height=400, width=width))
     x += width
 
 t = pygame.time.get_ticks()

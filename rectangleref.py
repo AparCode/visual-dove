@@ -1,4 +1,5 @@
-# Ray Tracing
+# VisualizerDove - Ray Tracing Rectangle Reference Image
+# FINAL PROJECT
 # @author: Aparnaa Senthilnathan
 # 3.12.7
 # ----------------------------------
@@ -6,7 +7,7 @@
 import numpy as np
 import math
 from PIL import Image
-MAX_DEPTH = 10
+MAX_DEPTH = 2
 class Point:
     def __init__(self, p):
         self.p = p
@@ -61,7 +62,6 @@ class Vector:
 
     def transform(self):
         pass
-
 class Ray:
     def __init__(self, o, d):
         self.origin = o
@@ -99,7 +99,6 @@ class Light:
         self.pos = pos
         # save the radiance
         self.color = color
-        
 class World:
     def __init__(self):
         self.objectList = []
@@ -113,7 +112,6 @@ class World:
 
     def addLight(self, light):
         self.lightList.append(light)
-
 class Object:
     def __init__(self, m):
         self.material = m
@@ -201,7 +199,6 @@ class Sphere:
 
     def type(self):
         return "sphere"
-
 class Triangle:
     def __init__(self, a: Point, b: Point, c: Point, col, spec, kr, kt):
         self.a = a
@@ -317,7 +314,6 @@ class someVectors:
         self.v = V
         self.r = R
 
-
 class IlluminationModel:
     def __init__(self, material):
         self.material = material
@@ -337,7 +333,23 @@ class Phong:
         # obj = id.obj
         # co = obj.color
         co = self.co
-        light = id.LightList[0]
+
+        # taking the averages of all lights
+        x = 0
+        y = 0
+        z = 0
+
+        for li in world.lightList:
+            x += li.pos[0]
+            y += li.pos[1]
+            z += li.pos[2]
+        
+        x_avg = x / 4.0
+        y_avg = y / 4.0
+        z_avg = z / 4.0
+
+        light = Light([x_avg, y_avg, z_avg], Color(255,255,255))
+            
         in_pt = id.pt
         norm = id.norm
 
@@ -427,7 +439,6 @@ class CookTorrance:
         print(id.pt)
 
 
-
 # returns the reflection vector
 # r = S + 2(s*n/|n|^2)n
 # ray = d
@@ -450,6 +461,48 @@ def reflection(ray, norm, value):
         r = Vector(ray.subtract(a))
 
     return r
+
+# --- CHECKPOINT 6 ---
+# check if the vector is facing forward
+def faceForward(A, B):
+    # for acute angles, the dot product must be positive
+    if A.dot(B) >= 0:
+        return A
+
+    # for obtuse angles, reverse the first vector
+    V = Vector(A).scaling(-1)
+
+    return V
+
+# calculating the transmission ray
+def transmission(ray, norm):
+    i = ray
+
+    # if the ray is inside the shape, use -n as the normal
+    # vector
+    if norm.dot(ray) < 0:
+        n = norm.scaling(-1)
+    else:
+        n = norm
+
+    # getting the refraction values
+    re_air_idx = 1.0
+    re_ground_idx = 1.0
+    
+    # calculating sin^2 using Snail's Law
+    ni_nt = re_ground_idx/re_air_idx
+
+    neg_i = i.scaling(-1)
+    cos_i = neg_i.dot(n)
+
+    sin_i2 = (ni_nt)**2 * (1-(cos_i**2))
+
+    # calculating the t vector now
+    t_n = (ni_nt * cos_i) - math.sqrt((1 - sin_i2))
+    t = (i.scaling(ni_nt)).add(n.scaling(t_n))
+
+    return Vector(t)
+
 
 def color_illuminate(ray, depth, world, background_color):
     # print("START")
@@ -478,16 +531,34 @@ def color_illuminate(ray, depth, world, background_color):
             closest_obj = in_list[0][0]
             closest_in_pt = in_list[0][1]
             closest_norm = in_list[0][2]
-        
-        # L = closest_obj.color
 
         data = IntersectData(closest_obj, closest_in_pt, closest_norm, world.lightList)
 
-        # ---- CHECKPOINT 3 ----
+
         phong = Phong(closest_obj.ka, closest_obj.kd, closest_obj.ks, closest_obj.ke, closest_obj.color)
         L, batch = phong.illuminate(data, world, depth)
-            
-        # ---- CHECKPOINT 3 ENDS HERE ----
+              
+        reflect_dir = batch.r
+        if depth < MAX_DEPTH:
+            kr = data.obj.kr
+            kt = data.obj.kt
+
+            if kr > 0:
+                in_pt = Vector(data.pt)
+                reflectRay = Ray(in_pt,reflect_dir)
+
+                L = L.addnewColor(color_illuminate(reflectRay, depth+1, world, background_color)).multiply(kr)
+
+            if kt > 0:
+                in_pt = Vector(data.pt)
+                norm = Vector(data.norm)
+
+                transmit_dir = transmission(ray.direction, norm)
+                transmissionRay = Ray(in_pt,transmit_dir)
+
+
+                L = L.addnewColor(color_illuminate(transmissionRay, depth+1, world, background_color)).multiply(kt)
+
         return L
 
 # ---- main function ----
@@ -499,61 +570,65 @@ def color_illuminate(ray, depth, world, background_color):
 # image_height = 108
 
 # # working triangles
-tri_a = Vector([2.25,2,1])
-tri_b = Vector([-2.25,2,1])
-tri_c = Vector([-2.25,-0.5,1])
+tri_a = Vector([4,2,1])
+tri_b = Vector([-4,2,1])
+tri_c = Vector([-4,-0.5,1])
 
-tri_a2 = Vector([-2.25,-0.5,1])
-tri_b2 = Vector([2.25,-0.5,1])
-tri_c2 = Vector([2.25,2,1])
+tri_a2 = Vector([-4,-0.5,1])
+tri_b2 = Vector([4,-0.5,1])
+tri_c2 = Vector([4,2,1])
 
-# tri_a2 = Vector([-0.5,-0.5,0])
-# tri_b2 = Vector([1,-0.5,0])
-# tri_c2 = Vector([1,0.5,1])
+flip_tri_a = Vector([4,-0.5,1])
+flip_tri_b = Vector([-4,-0.5,1])
+flip_tri_c = Vector([-4,-3,1])
 
-# # fixing
-# # tri_a = Vector([2,0.5,1])
-# # tri_b = Vector([-2,0.5,1])
-# # tri_c = Vector([-2,-0.5,0])
+flip_tri_a2 = Vector([-4,-3,1])
+flip_tri_b2 = Vector([4,-3,1])
+flip_tri_c2 = Vector([4,-0.5,1])
 
-# # tri_a2 = Vector([-2,-0.5,0])
-# # tri_b2 = Vector([2,-0.5,0])
-# # tri_c2 = Vector([2,0.5,1])
 
 # ---- other elements ---
 camera_eyept = Vector([0,0,0])
-floor_color = Color(217, 73, 252)
+color = Color(217, 73, 252)
+flip_color = Color(94, 30, 110)
 background_color = Color(0, 0, 0)
 spec_color = Color(255,255,255)
 
-# light = [12.5, -1.22, 3.7]
-light = [2.25,2,1]
+light = [12.25,2,1]
 light_rad_color = Color(255,255,255)
+light2 = [-12.25,2,1]
+light3 = [12.25,-2,1]
+light4 = [12.25,2,-1]
 
 
 
 # ---- CHECKPOINT 2 ----
 
 # final dimensioms
-# image_width = 1980
-# image_height = 1080
+image_width = 1024
+image_height = 768
 
 # testing dimensions
-image_width = 198
-image_height = 108
+# image_width = 128
+# image_height = 96
 
 frame = np.zeros((image_height, image_width, 3), dtype=np.uint8)
 
 # adding objects
 world = World()
-world.add(Triangle(tri_a, tri_b, tri_c, floor_color, spec_color, 0.0, 0.0))
-world.add(Triangle(tri_a2, tri_b2, tri_c2, floor_color, spec_color, 0.0, 0.0))
+world.add(Triangle(tri_a, tri_b, tri_c, color, spec_color, 0.0, 0.0))
+world.add(Triangle(tri_a2, tri_b2, tri_c2, color, spec_color, 0.0, 0.0))
+world.add(Triangle(flip_tri_a, flip_tri_b, flip_tri_c, color, spec_color, 0.3, 0.3))
+world.add(Triangle(flip_tri_a2, flip_tri_b2, flip_tri_c2, flip_color, spec_color, 0.3, 0.3))
 world.addLight(Light(light, light_rad_color))
+world.addLight(Light(light2, light_rad_color))
+world.addLight(Light(light3, light_rad_color))
+world.addLight(Light(light4, light_rad_color))
 
 # create film plane
 f = 8
-film_plane_width = 36
-film_plane_height = 24
+film_plane_width = 64
+film_plane_height = 48
 pixel_height = film_plane_height/image_height
 pixel_width = film_plane_width/image_width
 
@@ -573,12 +648,16 @@ for h in range(image_height):
         ray = Ray(pixel, endpoint)
         L = color_illuminate(ray, 1, world, background_color)
 
-        if L == None:
-            frame[h,w] = background_color.convert_to_bytes()
-        
-        else:
-            frame[h,w] = L.convert_to_bytes()
+        frame[h,w] = L.convert_to_bytes()
 
 # convert coordinates to an image
 img = Image.fromarray(frame, 'RGB')
 img.save('ref.png')
+
+# save the RGB values in a file
+with open("rgbref.txt", "w") as f:
+    for r in range(len(frame)):
+        for c in range(len(frame[r])):
+            f.write(str(frame[r][c][0]) + " " + str(frame[r][c][1]) + " " + str(frame[r][c][2]) + " ")
+            f.write("\n")
+        f.write("\n")

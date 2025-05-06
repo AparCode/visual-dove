@@ -1,3 +1,9 @@
+# VisualizerDove - PyGame Rectangle Testing File
+# FINAL PROJECT
+# @author: Aparnaa Senthilnathan
+# 3.12.7
+# ----------------------------------
+
 import pygame
 from pygame import mixer
 import librosa
