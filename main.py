@@ -97,7 +97,7 @@ n_fft = 2048 * 4
 hop_length = 512
 
 # import song file
-song = "creamsodaredemo2.wav"
+song = "musiclibrary/creamsodaredemo2.wav"
 
 # create a matrix with amplitude values
 time_series, sample_rate = librosa.load(song)
