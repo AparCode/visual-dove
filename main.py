@@ -21,7 +21,6 @@ class AudioBar:
         self.width = width
         self.min_height = min_height
         self.max_height = max_height
-
         self.height = min_height
 
         self.min_decibel = min_decibel
@@ -92,15 +91,20 @@ def get_decibel(target_time, freq, time_index_ratio, frequencies_index_ratio):
     return spectrogram[int(freq * frequencies_index_ratio)][int(target_time * time_index_ratio)]
 
 # main function
+
+# get parameters
+n_fft = 2048 * 4
+hop_length = 512
+
 # import song file
 song = "creamsodaredemo2.wav"
 
 # create a matrix with amplitude values
 time_series, sample_rate = librosa.load(song)
-n_fft = 2048 * 4
+
 
 # create a stft matrix which contains amplitude values 
-stft = np.abs(librosa.stft(time_series, hop_length=512, n_fft=n_fft))
+stft = np.abs(librosa.stft(time_series, hop_length=hop_length, n_fft=n_fft))
 
 # create a spectrogram using the values of stft to convert into a matrix of decibels
 spectrogram = librosa.amplitude_to_db(stft, ref=np.max) 
@@ -109,7 +113,7 @@ spectrogram = librosa.amplitude_to_db(stft, ref=np.max)
 frequencies = librosa.core.fft_frequencies(n_fft=n_fft) 
 
 # get an array of periodic times and index ratios of both time and frequencies
-times = librosa.core.frames_to_time(np.arange(spectrogram.shape[1]), sr=sample_rate, hop_length=512, n_fft=n_fft)
+times = librosa.core.frames_to_time(np.arange(spectrogram.shape[1]), sr=sample_rate, hop_length=hop_length, n_fft=n_fft)
 time_index_ratio = len(times)/times[len(times) - 1]
 frequencies_index_ratio = len(frequencies)/frequencies[len(frequencies)-1]
 
